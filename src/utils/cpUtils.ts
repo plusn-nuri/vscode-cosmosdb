@@ -12,7 +12,7 @@ export namespace cpUtils {
         let cmdOutput: string = '';
         let cmdOutputIncludingStderr: string = '';
         workingDirectory = workingDirectory || os.tmpdir();
-        const formattedArgs: string = args.join(' ');
+        const commandWithArgs: string = ([command].concat(args)).join(' '); // asdf changed
         await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
             const options: cp.SpawnOptions = {
                 cwd: workingDirectory,
@@ -21,7 +21,7 @@ export namespace cpUtils {
             const childProc: cp.ChildProcess = cp.spawn(command, args, options);
 
             if (outputChannel) {
-                outputChannel.appendLine(`Running command: "${command} ${formattedArgs}"...`);
+                outputChannel.appendLine(`Running command: "${commandWithArgs}"...`);
             }
 
             childProc.stdout.on('data', (data: string | Buffer) => {
@@ -51,11 +51,11 @@ export namespace cpUtils {
                         outputChannel.show();
                         reject(new Error(`Failed to run "${command}" command. Check output window for more details.`));
                     } else {
-                        reject(new Error(`Command "${command} ${formattedArgs}" failed with exit code "${code}":${os.EOL}${cmdOutputIncludingStderr}`));
+                        reject(new Error(`Command "${commandWithArgs}" failed with exit code "${code}":${os.EOL}${cmdOutputIncludingStderr}`));
                     }
                 } else {
                     if (outputChannel) {
-                        outputChannel.appendLine(`Finished running command: "${command} ${formattedArgs}".`);
+                        outputChannel.appendLine(`Finished running command: "${commandWithArgs}".`);
                     }
                     resolve();
                 }
