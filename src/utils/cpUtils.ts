@@ -14,11 +14,11 @@ export namespace cpUtils {
         workingDirectory = workingDirectory || os.tmpdir();
         const commandWithArgs: string = ([command].concat(args)).join(' '); // asdf changed
         await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
-            const options: cp.SpawnOptions = {
-                cwd: workingDirectory,
-                shell: true
-            };
-            const childProc: cp.ChildProcess = cp.spawn(command, args, options);
+            // const options: cp.SpawnOptions = {
+            //     cwd: workingDirectory,
+            //     shell: true
+            // };
+            const childProc: cp.ChildProcess = cp.exec(command);
 
             if (outputChannel) {
                 outputChannel.appendLine(`Running command: "${commandWithArgs}"...`);
