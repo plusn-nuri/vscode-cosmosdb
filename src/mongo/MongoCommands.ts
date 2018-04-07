@@ -18,16 +18,48 @@ import { MongoFindOneResultEditor } from './editors/MongoFindOneResultEditor';
 import { MongoCommand } from './MongoCommand';
 import { MongoDatabaseTreeItem } from './tree/MongoDatabaseTreeItem';
 
+const output = vscodeUtil.getOutputChannel();
+
 export class MongoCommands {
+
+	public static async executeAllCommandsFromActiveEditor(database: IAzureParentNode<MongoDatabaseTreeItem>, extensionPath, editorManager: CosmosEditorManager, tree: AzureTreeDataProvider, context: IActionContext): Promise<void> {
+		let commands = MongoCommands.getAllCommandsFromActiveEditor();
+		await MongoCommands.executeCommands(commands, vscode.window.activeTextEditor, database, extensionPath, editorManager, tree, context);
+	}
+
 	public static async executeCommandFromActiveEditor(database: IAzureParentNode<MongoDatabaseTreeItem>, extensionPath, editorManager: CosmosEditorManager, tree: AzureTreeDataProvider, context: IActionContext): Promise<void> {
+		const commands = MongoCommands.getAllCommandsFromActiveEditor();
 		const activeEditor = vscode.window.activeTextEditor;
-		if (activeEditor.document.languageId !== 'mongo') {
-			vscode.window.showInformationMessage("This command can only be run inside of a MongoDB scrapbook (*.mongo)");
-			return;
-		}
 		const selection = activeEditor.selection;
-		const command = MongoCommands.getCommand(activeEditor.document.getText(), selection.start);
+		const command = MongoCommands.getCommandAtPosition(commands, selection.start);
+		return this.executeCommand(activeEditor, database, extensionPath, editorManager, tree, context, command);
+	}
+
+	public static getAllCommandsFromActiveEditor(): MongoCommand[] {
+		const activeEditor = vscode.window.activeTextEditor;
+		const commands = MongoCommands.getAllCommandsFromTextDocument(activeEditor.document);
+		return commands;
+	}
+
+	public static getAllCommandsFromTextDocument(document: vscode.TextDocument): MongoCommand[] {
+		if (document.languageId !== 'mongo') {
+			throw new Error("This command can only be run inside of a MongoDB scrapbook (*.mongo)");
+		}
+
+		return MongoCommands.getAllCommands(document.getText());
+	}
+
+	public static async executeCommands(commands: MongoCommand[], activeEditor: vscode.TextEditor, database: IAzureParentNode<MongoDatabaseTreeItem>, extensionPath, editorManager: CosmosEditorManager, tree: AzureTreeDataProvider, context: IActionContext): Promise<void> {
+		for (let command of commands) {
+			await this.executeCommand(activeEditor, database, extensionPath, editorManager, tree, context, command);
+		}
+	}
+
+	public static async executeCommand(activeEditor: vscode.TextEditor, database: IAzureParentNode<MongoDatabaseTreeItem>, extensionPath, editorManager: CosmosEditorManager, tree: AzureTreeDataProvider, context: IActionContext, command: MongoCommand): Promise<void> {
 		if (command) {
+			output.show();
+			output.appendLine(command.text);
+
 			try {
 				context.properties["command"] = command.name;
 				context.properties["argsCount"] = String(command.arguments ? command.arguments.length : 0);
@@ -58,12 +90,21 @@ export class MongoCommands {
 	}
 
 	public static getCommand(content: string, position?: vscode.Position): MongoCommand {
+		let commands = MongoCommands.getAllCommands(content);
+		return this.getCommandAtPosition(commands, position);
+	}
+
+	private static getAllCommands(content: string): MongoCommand[] {
 		const lexer = new mongoLexer(new InputStream(content));
 		lexer.removeErrorListeners();
 		const parser = new mongoParser.mongoParser(new CommonTokenStream(lexer));
 		parser.removeErrorListeners();
 
 		const commands = new MongoScriptDocumentVisitor().visit(parser.commands());
+		return commands;
+	}
+
+	private static getCommandAtPosition(commands: MongoCommand[], position?: vscode.Position): MongoCommand {
 		let lastCommandOnSameLine = null;
 		let lastCommandBeforePosition = null;
 		if (position) {
@@ -83,7 +124,7 @@ export class MongoCommands {
 	}
 }
 
-export class MongoScriptDocumentVisitor extends MongoVisitor<MongoCommand[]> {
+class MongoScriptDocumentVisitor extends MongoVisitor<MongoCommand[]> {
 
 	private commands: MongoCommand[] = [];
 
@@ -127,4 +168,3 @@ export class MongoScriptDocumentVisitor extends MongoVisitor<MongoCommand[]> {
 		return this.commands;
 	}
 }
-

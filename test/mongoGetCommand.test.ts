@@ -5,7 +5,7 @@
 
 // The module 'assert' provides assertion methods from node
 import * as assert from 'assert';
-import { MongoCommands } from '../src/mongo/commands';
+import { MongoCommands } from '../src/mongo/MongoCommands';
 import { Position } from 'vscode';
 
 function testParseExpectError(text: string, expected: { collection: string, name: string, args: object[] }) {

@@ -10,7 +10,7 @@ import { MongoDatabaseTreeItem } from "./tree/MongoDatabaseTreeItem";
 import { MongoAccountTreeItem } from "./tree/MongoAccountTreeItem";
 import MongoDBLanguageClient from "./languageClient";
 import * as vscodeUtil from '../utils/vscodeUtils';
-import { MongoCommands } from "./commands";
+import { MongoCommands } from "./MongoCommands";
 import { MongoDocumentTreeItem } from "./tree/MongoDocumentTreeItem";
 import { MongoCollectionNodeEditor } from "./editors/MongoCollectionNodeEditor";
 import { CosmosEditorManager } from "../CosmosEditorManager";
@@ -97,6 +97,10 @@ export function registerMongoCommands(context: vscode.ExtensionContext, actionHa
     actionHandler.registerCommand('cosmosDB.executeMongoCommand', async function (this: IActionContext) {
         await loadPersistedMongoDBTask;
         await MongoCommands.executeCommandFromActiveEditor(<IAzureParentNode<MongoDatabaseTreeItem>>ext.connectedMongoDB, context.extensionPath, editorManager, tree, this);
+    });
+    actionHandler.registerCommand('cosmosDB.executeAllMongoCommands', async function (this: IActionContext) {
+        await loadPersistedMongoDBTask;
+        await MongoCommands.executeAllCommandsFromActiveEditor(<IAzureParentNode<MongoDatabaseTreeItem>>ext.connectedMongoDB, context.extensionPath, editorManager, tree, this);
     });
 }
 

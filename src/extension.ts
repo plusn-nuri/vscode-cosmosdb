@@ -27,6 +27,7 @@ import { DocDBAccountTreeItemBase } from './docdb/tree/DocDBAccountTreeItemBase'
 import { GraphAccountTreeItem } from './graph/tree/GraphAccountTreeItem';
 import { DocDBAccountTreeItem } from './docdb/tree/DocDBAccountTreeItem';
 import { TableAccountTreeItem } from './table/tree/TableAccountTreeItem';
+import { MongoCodeLensProvider } from './mongo/services/MongoCodeLensProvider';
 
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(new Reporter(context));
@@ -36,6 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const tree: AzureTreeDataProvider = new AzureTreeDataProvider(new CosmosDBAccountProvider(), 'cosmosDB.loadMore', ui, reporter, [new AttachedAccountsTreeItem(context.globalState)]);
 	context.subscriptions.push(tree);
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('cosmosDBExplorer', tree));
+	context.subscriptions.push(vscode.languages.registerCodeLensProvider('mongo', new MongoCodeLensProvider()));
 
 	const editorManager: CosmosEditorManager = new CosmosEditorManager(context.globalState);
 

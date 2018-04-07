@@ -30,6 +30,9 @@ export class LanguageService {
 				capabilities: {
 					textDocumentSync: this.textDocuments.syncKind, // Tell the client that the server works in FULL text document sync mode
 					completionProvider: { triggerCharacters: ['.'] },
+					codeLensProvider: {
+						resolveProvider: false
+					}
 				}
 			};
 		});
