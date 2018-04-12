@@ -8,7 +8,7 @@ import { Experience } from "../constants";
 export function getExperienceName(experience: Experience) {
     switch (experience) {
         case Experience.DocumentDB: return "SQL";
-        case Experience.Graph: return "Gremlin (graph)";
+        case Experience.Graph: return "Gremlin";
         case Experience.MongoDB: return "MongoDB";
         case Experience.Table: return "Azure Table";
         default:
