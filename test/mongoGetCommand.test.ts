@@ -29,27 +29,6 @@ function testParse(text: string, expected: { collection: string, name: string, a
     assert.deepEqual(actualArgs, expected.args, "Parsed arguments are not correct");
 }
 
-function testParseExpectError(text: string, expected: { collection: string, name: string, args: object[] }) {
-    let caughtError = false;
-    try {
-        testParse(text, expected);
-    } catch (error) {
-        caughtError = true;
-    }
-
-    assert.equal(caughtError, true, "Parse should have thrown an exception but didn't");
-}
-
-function testParse(text: string, expected: { collection: string, name: string, args: object[] }) {
-    let command = MongoCommands.getCommand(text, new Position(0, 0));
-
-    assert.equal(command.collection, expected.collection, "Parsed collection name is not correct");
-    assert.equal(command.name, expected.name, "Parsed command name is not correct");
-
-    let actualArgs = (command.arguments || []).map(arg => JSON.parse(arg));
-    assert.deepEqual(actualArgs, expected.args, "Parsed arguments are not correct");
-}
-
 suite("scrapbook parsing Tests", () => {
     test("find", () => {
         let text = "db.find()";

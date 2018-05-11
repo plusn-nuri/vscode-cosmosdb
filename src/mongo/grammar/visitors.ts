@@ -40,10 +40,6 @@ export class MongoVisitor<T> implements mongoVisitor<T> {
 		return this.visitChildren(ctx);
 	}
 
-	visitArguments(ctx: ArgumentsContext): T {
-		return this.visitChildren(ctx);
-	}
-
 	visit(tree: ParseTree): T {
 		return tree.accept(this);
 	}
