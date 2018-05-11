@@ -110,7 +110,7 @@ export class GraphClient {
 
   private selectById<T extends HTMLElement>(id: string): T {
     let elem = <T>d3.select(`#${id}`)[0][0];
-    console.assert(!!elem, `Could not find element with ID ${id}`)
+    console.assert(!!elem, `Could not find element with ID ${id}`);
     return elem;
   }
 
@@ -206,9 +206,11 @@ export class GraphClient {
 
   public copyParentStyleSheets() {
     // Copy style sheets from parent to pick up theme colors
-    var head = document.getElementsByTagName("head")[0];
-    var styleSheets = parent.document.getElementsByTagName("style");
-    for (var i = 0; i < styleSheets.length; ++i) {
+    const head = document.getElementsByTagName("head")[0];
+    const styleSheets = parent.document.getElementsByTagName("style");
+    // The styleSheets object doesn't have a method returning an iterator
+    // tslint:disable-next-line:prefer-for-of
+    for (let i = 0; i < styleSheets.length; ++i) {
       head.insertBefore(styleSheets[i].cloneNode(true), head.firstChild);
     }
   }
@@ -327,8 +329,8 @@ class GraphView {
     // Create edges and set their source/target
     let links: ForceLink[] = [];
     edges.forEach(e => {
-      var source = nodesById.get(e.outV);
-      var target = nodesById.get(e.inV);
+      let source = nodesById.get(e.outV);
+      let target = nodesById.get(e.inV);
 
       if (source && target) {
         links.push({ edge: e, source, target });
@@ -382,7 +384,7 @@ class GraphView {
     // Allow user to drag/zoom the entire SVG
     svg = svg
       .call(d3.behavior.zoom().on("zoom", function () {
-        svg.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")")
+        svg.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")");
       }))
       .append("g");
 
@@ -462,8 +464,8 @@ class GraphView {
   private generateDefaultColors(vertices: GraphVertex[]): void {
     // Keep previous entries, changing colors between queries would be confusing
 
-    for (let i = 0; i < vertices.length; ++i) {
-      let label = vertices[i].label;
+    for (let vertex of vertices) {
+      let label = vertex.label;
       if (!this._defaultColorsPerLabel.get(label)) {
         let colorIndex = this._defaultColorsPerLabel.size;
         let newColor = this._colorGenerator(colorIndex);
@@ -497,21 +499,21 @@ class GraphView {
   private positionLink(l: any) {
     const d1 = GraphView.calculateControlPoint(l.source, l.target);
 
-    var radius = vertexRadius + paddingBetweenVertexAndEdge;
+    let radius = vertexRadius + paddingBetweenVertexAndEdge;
 
     // Start
-    var dx = d1.x - l.source.x;
-    var dy = d1.y - l.source.y;
-    var angle = Math.atan2(dy, dx);
-    var tx = l.source.x + (Math.cos(angle) * radius);
-    var ty = l.source.y + (Math.sin(angle) * radius);
+    let dx = d1.x - l.source.x;
+    let dy = d1.y - l.source.y;
+    let angle = Math.atan2(dy, dx);
+    let tx = l.source.x + (Math.cos(angle) * radius);
+    let ty = l.source.y + (Math.sin(angle) * radius);
 
     // End
     dx = l.target.x - d1.x;
     dy = l.target.y - d1.y;
     angle = Math.atan2(dy, dx);
-    var ux = l.target.x - (Math.cos(angle) * radius);
-    var uy = l.target.y - (Math.sin(angle) * radius);
+    let ux = l.target.x - (Math.cos(angle) * radius);
+    let uy = l.target.y - (Math.sin(angle) * radius);
 
     return "M" + tx + "," + ty
       + "S" + d1.x + "," + d1.y
@@ -521,13 +523,11 @@ class GraphView {
   private findVertexPropertySetting(v: GraphVertex, viewSettings: GraphViewSettings, settingProperty: keyof VertexSettingsGroup): any | undefined {
     let label = v.label;
 
-    for (let i = 0; i < viewSettings.length; ++i) {
-      let graphSettingsGroup = viewSettings[i];
+    for (let graphSettingsGroup of viewSettings) {
       let vertextSettingsGroups: VertexSettingsGroup[] = graphSettingsGroup.vertexSettings || [];
 
       // Check groups which specify a label filter first
-      for (let i = 0; i < vertextSettingsGroups.length; ++i) {
-        let group = vertextSettingsGroups[i];
+      for (let group of vertextSettingsGroups) {
         if (group.appliesToLabel && group.appliesToLabel === label) {
           // This settings group is applicable to this vertex
           let value = group[settingProperty];
@@ -562,8 +562,7 @@ class GraphView {
     let text: string;
     let propertyCandidates = this.findVertexPropertySetting(v, viewSettings, "displayProperty") || [];
     // Find the first specified property that exists and has a non-empty value
-    for (let i = 0; i < propertyCandidates.length; ++i) {
-      let candidate = propertyCandidates[i];
+    for (let candidate of propertyCandidates) {
       if (candidate === "id") {
         text = v.id;
       } else if (candidate === "label" && v.label) {

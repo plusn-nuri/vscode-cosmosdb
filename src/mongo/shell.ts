@@ -6,26 +6,27 @@ import * as cp from 'child_process';
 import * as os from 'os';
 import { IDisposable, toDisposable } from '../utils/vscodeUtils';
 import { EventEmitter, window } from 'vscode';
+import { ext } from '../extensionVariables';
 
 export class Shell {
 
 	private executionId: number = 0;
 	private disposables: IDisposable[] = [];
 
-	private onResult: EventEmitter<{ exitCode, result, stderr }> = new EventEmitter<{ exitCode, result, stderr }>();
+	private onResult: EventEmitter<{ exitCode, result, stderr, code?: string, message?: string }> = new EventEmitter<{ exitCode, result, stderr, code?: string, message?: string }>();
 
 	public static create(execPath: string, connectionString: string): Promise<Shell> {
 		return new Promise((c, e) => {
 			try {
 				const shellProcess = cp.spawn(execPath, ['--quiet', connectionString]);
-				return c(new Shell(shellProcess));
+				return c(new Shell(execPath, shellProcess));
 			} catch (error) {
 				e(`Error while creating mongo shell with path '${execPath}': ${error}`);
 			}
 		});
 	}
 
-	constructor(private mongoShell: cp.ChildProcess) {
+	constructor(private execPath: string, private mongoShell: cp.ChildProcess) {
 		this.initialize();
 	}
 
@@ -45,7 +46,7 @@ export class Shell {
 
 		let buffers: string[] = [];
 		on(this.mongoShell.stdout, 'data', b => {
-			let data: string = b.toString()
+			let data: string = b.toString();
 			const delimitter = `${this.executionId}${os.EOL}`;
 			if (data.endsWith(delimitter)) {
 				const result = buffers.join('') + data.substring(0, data.length - delimitter.length);
@@ -81,12 +82,6 @@ export class Shell {
 			window.showErrorMessage(error.toString());
 		}
 
-		const disposables: IDisposable[] = [];
-		(ee: NodeJS.EventEmitter, name: string, fn: Function) => {
-			ee.once(name, fn);
-			disposables.push(toDisposable(() => ee.removeListener(name, fn)));
-		};
-
 		return await new Promise<string>((c, e) => {
 			let executed = false;
 			const handler = setTimeout(
@@ -98,10 +93,20 @@ export class Shell {
 				5000);
 			const disposable = this.onResult.event(result => {
 				disposable.dispose();
-				let lines = (<string>result.result).split(os.EOL).filter(line => !!line && line !== 'Type "it" for more');
-				lines = lines[lines.length - 1] === 'Type "it" for more' ? lines.splice(lines.length - 1, 1) : lines;
-				executed = true;
-				c(lines.join(os.EOL));
+
+				if (result && result.code) {
+					if (result.code === 'ENOENT') {
+						result.message = `Could not find Mongo shell. Make sure it is on your path or you have set the '${ext.settingsKeys.mongoShellPath}' VS Code setting to point to the Mongo shell executable file. Attempted command: "${this.execPath}"`;
+					}
+
+					e(result);
+				} else {
+					let lines = (<string>result.result).split(os.EOL).filter(line => !!line && line !== 'Type "it" for more');
+					lines = lines[lines.length - 1] === 'Type "it" for more' ? lines.splice(lines.length - 1, 1) : lines;
+					executed = true;
+					c(lines.join(os.EOL));
+				}
+
 				if (handler) {
 					clearTimeout(handler);
 				}

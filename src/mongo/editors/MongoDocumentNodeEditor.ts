@@ -6,6 +6,9 @@
 import { IAzureNode } from "vscode-azureextensionui";
 import { IMongoDocument, MongoDocumentTreeItem } from "../tree/MongoDocumentTreeItem";
 import { ICosmosEditor } from "../../CosmosEditorManager";
+import { getNodeEditorLabel } from '../../utils/vscodeUtils';
+// tslint:disable:no-var-requires
+const EJSON = require("mongodb-extended-json");
 
 export class MongoDocumentNodeEditor implements ICosmosEditor<IMongoDocument> {
     private _documentNode: IAzureNode<MongoDocumentTreeItem>;
@@ -14,10 +17,7 @@ export class MongoDocumentNodeEditor implements ICosmosEditor<IMongoDocument> {
     }
 
     public get label(): string {
-        const collectionNode = this._documentNode.parent;
-        const databaseNode = collectionNode.parent;
-        const accountNode = databaseNode.parent;
-        return `${accountNode.treeItem.label}/${databaseNode.treeItem.label}/${collectionNode.treeItem.label}/${this._documentNode.treeItem.label}`;
+        return getNodeEditorLabel(this._documentNode);
     }
 
     public async getData(): Promise<IMongoDocument> {
@@ -30,5 +30,13 @@ export class MongoDocumentNodeEditor implements ICosmosEditor<IMongoDocument> {
 
     public get id(): string {
         return this._documentNode.id;
+    }
+
+    public convertFromString(data: string): IMongoDocument {
+        return EJSON.parse(data);
+    }
+
+    public convertToString(data: IMongoDocument): string {
+        return EJSON.stringify(data, null, 2);
     }
 }

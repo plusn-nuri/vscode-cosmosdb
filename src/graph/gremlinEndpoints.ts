@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import CosmosDBManagementClient = require("azure-arm-cosmosdb");
+import { CosmosDBManagementClient } from 'azure-arm-cosmosdb';
 
 export interface IGremlinEndpoint {
     host: string;
@@ -14,7 +14,7 @@ export interface IGremlinEndpoint {
 export async function TryGetGremlinEndpointFromAzure(client: CosmosDBManagementClient, resourceGroup: string, account: string): Promise<IGremlinEndpoint | undefined> {
     return new Promise<IGremlinEndpoint>((resolve, reject) => {
         // Use the callback version of get because the Promise one currently doesn't expose gremlinEndpoint (https://github.com/Azure/azure-documentdb-node/issues/227)
-        client.databaseAccounts.get(resourceGroup, account, (error, result, httpRequest, response) => {
+        client.databaseAccounts.get(resourceGroup, account, (error, _result, _httpRequest, response) => {
             if (error) {
                 reject(error);
             } else {

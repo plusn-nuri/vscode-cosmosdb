@@ -55,7 +55,7 @@
         "no-duplicate-case": true,
         "no-duplicate-super": true,
         "no-duplicate-variable": true,
-        // TODO: "no-empty": true,
+        "no-empty": true,
         // TODO: "no-floating-promises": true,
         "no-for-in-array": true,
         "no-import-side-effect": true,
@@ -78,7 +78,7 @@
         "no-unnecessary-override": true,
         // TODO: "no-unsafe-any": true,
         "no-unsafe-finally": true,
-        // TODO: "no-unused-expression": true,
+        "no-unused-expression": true,
         // TODO: "no-use-before-declare": true,
         "no-with-statement": true,
         // TODO: "promise-function-async": true,
@@ -122,7 +122,7 @@
         // TODO: "interface-name": true,
         "jsdoc-format": true,
         "max-classes-per-file": [
-            false, // TODO: true,
+            true,
             3
         ],
         "max-file-line-count": true,
@@ -166,7 +166,7 @@
         "no-unnecessary-qualifier": true,
         "no-unsupported-browser-code": true,
         "no-useless-files": true,
-        // TODO: "no-var-keyword": true,
+        "no-var-keyword": true,
         "no-var-requires": true,
         // TODO: "no-var-self": true,
         "no-void-expression": [
@@ -179,7 +179,7 @@
         // TODO: "ordered-imports": true,
         "prefer-array-literal": true,
         "prefer-const": false, // changed
-        // TODO: "prefer-for-of": true,
+        "prefer-for-of": true,
         // TODO: "prefer-method-signature": true,
         // TODO: "prefer-template": true,
         "return-undefined": false,
@@ -229,7 +229,7 @@
         ],
         "linebreak-style": false, //changed
         "newline-before-return": false, // changed
-        // TODO: "no-consecutive-blank-lines": true,
+        "no-consecutive-blank-lines": true,
         "no-empty-line-after-opening-brace": false,
         // TODO: "no-single-line-block-comment": true,
         "no-trailing-whitespace": true,
@@ -251,7 +251,7 @@
         ],
         "react-tsx-curly-spacing": true,
         "semicolon": [
-            false, // TODO: true,
+            true,
             "always"
         ],
         "trailing-comma": [

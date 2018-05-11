@@ -11,6 +11,7 @@ import { MongoDatabaseTreeItem, validateMongoCollectionName } from './MongoDatab
 import { MongoCollectionTreeItem } from './MongoCollectionTreeItem';
 import { MongoDocumentTreeItem } from './MongoDocumentTreeItem';
 import { deleteCosmosDBAccount } from '../../commands/deleteCosmosDBAccount';
+import { getDatabaseNameFromConnectionString } from '../mongoConnectionStrings';
 
 export class MongoAccountTreeItem implements IAzureParentTreeItem {
     public static contextValue: string = "cosmosDBMongoServer";
@@ -40,14 +41,31 @@ export class MongoAccountTreeItem implements IAzureParentTreeItem {
         return false;
     }
 
-    public async loadMoreChildren(_node: IAzureNode, _clearCache: boolean): Promise<IAzureTreeItem[]> {
+    public async loadMoreChildren(node: IAzureNode, _clearCache: boolean): Promise<IAzureTreeItem[]> {
         let db: Db | undefined;
         try {
+            let databases: IDatabaseInfo[];
+
+            if (!this.connectionString) {
+                throw new Error('Missing connection string');
+            }
+
             db = await MongoClient.connect(this.connectionString);
-            const result: { databases: IDatabaseInfo[] } = await db.admin().listDatabases();
-            return result.databases
+            let databaseInConnectionString = getDatabaseNameFromConnectionString(this.connectionString);
+            if (databaseInConnectionString && !this.isEmulator) { // emulator violates the connection string format
+                // If the database is in the connection string, that's all we connect to (we might not even have permissions to list databases)
+                databases = [{
+                    name: databaseInConnectionString,
+                    empty: false
+                }];
+            } else {
+                let result: { databases: IDatabaseInfo[] } = await db.admin().listDatabases();
+                databases = result.databases;
+            }
+            return databases
                 .filter((database: IDatabaseInfo) => !(database.name && database.name.toLowerCase() === "admin" && database.empty)) // Filter out the 'admin' database if it's empty
-                .map(database => new MongoDatabaseTreeItem(database.name, this.connectionString));
+                .map(database => new MongoDatabaseTreeItem(database.name, this.connectionString, node.id));
+
         } catch (error) {
             return [{
                 id: 'cosmosMongoError',
@@ -61,7 +79,7 @@ export class MongoAccountTreeItem implements IAzureParentTreeItem {
         }
     }
 
-    public async createChild(_node: IAzureNode, showCreatingNode: (label: string) => void): Promise<IAzureTreeItem> {
+    public async createChild(node: IAzureNode, showCreatingNode: (label: string) => void): Promise<IAzureTreeItem> {
         const databaseName = await vscode.window.showInputBox({
             placeHolder: "Database Name",
             prompt: "Enter the name of the database",
@@ -77,7 +95,7 @@ export class MongoAccountTreeItem implements IAzureParentTreeItem {
             if (collectionName) {
                 showCreatingNode(databaseName);
 
-                const databaseTreeItem = new MongoDatabaseTreeItem(databaseName, this.connectionString);
+                const databaseTreeItem = new MongoDatabaseTreeItem(databaseName, this.connectionString, node.id);
                 await databaseTreeItem.createCollection(collectionName);
                 return databaseTreeItem;
             }
@@ -110,7 +128,7 @@ function validateDatabaseName(database: string): string | undefined | null {
         return `Database name must be between ${min} and ${max} characters.`;
     }
     if (/[/\\. "$]/.test(database)) {
-        return "Database name cannot contain these characters - `/\\. \"$`"
+        return "Database name cannot contain these characters - `/\\. \"$`";
     }
     return undefined;
 }

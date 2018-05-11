@@ -2,6 +2,62 @@
 
 All notable changes to the "azure-cosmosdb" extension will be documented in this file.
 
+## 0.7.1 - 2018-05-10
+
+### [Fixed](https://github.com/Microsoft/vscode-cosmosdb/issues?q=is%3Aissue+milestone%3A%220.7.1%22+is%3Aclosed+label%3Abug)
+
+- Fixed error "Unexpected Experience Value" when retrieving database accounts
+
+## 0.7.0 - 2018-05-04
+
+### Added
+- Mongo
+  - CodeLens support for scrapbook
+  - Execute all commands in a scrapbook, allowing you to use scrapbooks as scripts
+  - Support for ObjectIDs, ISODate, and extended JSON data types in document views
+
+- SQL
+  - View, open, edit and update Stored Procedures
+
+- Miscellaneous
+  - Error messages are now modal
+  - Open newly created docs in editor
+
+### Changed
+- Moved Azure CosmosDB Explorer to new Azure view container instead of file explorer
+
+### Fixed
+- [Better error messages for connection strings](https://github.com/Microsoft/vscode-cosmosdb/pull/600)
+- [Don't throw errors on dropping non-existent collections](https://github.com/Microsoft/vscode-cosmosdb/pull/541)
+- [Errors no longer written to output in the middle of writing a scrapbook command](https://github.com/Microsoft/vscode-cosmosdb/issues/516)
+- [Additional bugs fixed](https://github.com/Microsoft/vscode-cosmosdb/issues?q=is%3Aissue+milestone%3A%220.7.0%22+is%3Aclosed+label%3Abug)
+
+
+## 0.6.0 - 2018-04-09
+
+### Added
+
+- Mongo
+  - mongo.shell.path setting no longer required if shell is in system path
+  - Allow mongo.shell.path to be specified in workspace settings as well as user settings
+  - No longer asking for an id for new documents
+  - Connected database is now persisted between sessions
+  - Improvements to scrapbook setup and error handling
+
+- Azure subscriptions
+  - New "filter" button on subscription nodes
+  - New "Open in Portal" menu item for subscriptions
+
+- Miscellaneous
+  - New "Report an Issue" button on error dialogs
+
+### Fixed
+
+- [Allow access to multi-tenant mongo server](https://github.com/Microsoft/vscode-cosmosdb/issues/473)
+- [Can only run the first command in a Mongo Scrapbook on Windows](https://github.com/Microsoft/vscode-cosmosdb/issues/386)
+- [Projections Not Working In Mongo Scrapbooks](https://github.com/Microsoft/vscode-cosmosdb/issues/214)
+- [Additional bugs fixed](https://github.com/Microsoft/vscode-cosmosdb/issues?q=is%3Aissue+milestone%3A%220.6.0%22+is%3Aclosed+label%3Abug)
+
 ## 0.5.1 - 2018-03-23
 
 ### Fixed

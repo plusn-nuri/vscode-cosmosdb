@@ -11,6 +11,8 @@ import { ICosmosEditor } from "../../CosmosEditorManager";
 import { MongoDatabaseTreeItem } from "../tree/MongoDatabaseTreeItem";
 import { MongoCommand } from "../MongoCommand";
 import { MongoCollectionTreeItem } from "../tree/MongoCollectionTreeItem";
+// tslint:disable:no-var-requires
+const EJSON = require("mongodb-extended-json");
 
 export class MongoFindResultEditor implements ICosmosEditor<IMongoDocument[]> {
     private _databaseNode: IAzureParentNode<MongoDatabaseTreeItem>;
@@ -51,6 +53,14 @@ export class MongoFindResultEditor implements ICosmosEditor<IMongoDocument[]> {
 
     public get id(): string {
         return `${this._databaseNode.id}/${this._command.collection}`;
+    }
+
+    public convertFromString(data: string): IMongoDocument[] {
+        return EJSON.parse(data);
+    }
+
+    public convertToString(data: IMongoDocument[]): string {
+        return EJSON.stringify(data, null, 2);
     }
 
 }

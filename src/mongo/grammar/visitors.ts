@@ -7,7 +7,7 @@ import { ParseTree } from 'antlr4ts/tree/ParseTree';
 import { TerminalNode } from 'antlr4ts/tree/TerminalNode';
 import { ErrorNode } from 'antlr4ts/tree/ErrorNode';
 import { ParserRuleContext } from 'antlr4ts/ParserRuleContext';
-import { CommandsContext, CommandContext, FunctionCallContext, MongoCommandsContext, CollectionContext, ArgumentListContext, ArgumentsContext } from './mongoParser';
+import { CommandsContext, CommandContext, FunctionCallContext, MongoCommandsContext, CollectionContext, ArgumentContext, ArgumentsContext } from './mongoParser';
 import { mongoVisitor } from './mongoVisitor';
 
 export class MongoVisitor<T> implements mongoVisitor<T> {
@@ -32,7 +32,11 @@ export class MongoVisitor<T> implements mongoVisitor<T> {
 		return this.visitChildren(ctx);
 	}
 
-	visitArgumentList(ctx: ArgumentListContext): T {
+	visitArgument(ctx: ArgumentContext): T {
+		return this.visitChildren(ctx);
+	}
+
+	visitArguments(ctx: ArgumentsContext): T {
 		return this.visitChildren(ctx);
 	}
 
@@ -67,7 +71,7 @@ export class MongoVisitor<T> implements mongoVisitor<T> {
 		throw new Error(`Error at line ${node._symbol.line}, from ${node.symbol.startIndex} to ${node.symbol.stopIndex}, near '${node.text}'. Please check syntax.`);
 	}
 
-	protected defaultResult(node: ParseTree): T {
+	protected defaultResult(_node: ParseTree): T {
 		return null;
 	}
 
@@ -75,7 +79,7 @@ export class MongoVisitor<T> implements mongoVisitor<T> {
 		return nextResult === null ? aggregate : nextResult;
 	}
 
-	shouldVisitNextChild(node, currentResult: T): boolean {
+	shouldVisitNextChild(_node, _currentResult: T): boolean {
 		return true;
 	}
 }

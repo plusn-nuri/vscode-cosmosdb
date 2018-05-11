@@ -4,14 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import * as vm from 'vm';
 import * as path from 'path';
 import * as _ from 'underscore';
 import * as util from '../../utils/vscodeUtils';
 import { Collection, Cursor, ObjectID, InsertOneWriteOpResult, BulkWriteOpResultObject, CollectionInsertManyOptions } from 'mongodb';
-import { IAzureParentTreeItem, IAzureTreeItem, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
-import { DialogBoxResponses, DefaultBatchSize } from '../../constants';
+import { IAzureParentTreeItem, IAzureTreeItem, IAzureNode, UserCancelledError, DialogResponses } from 'vscode-azureextensionui';
+import { DefaultBatchSize } from '../../constants';
 import { IMongoDocument, MongoDocumentTreeItem } from './MongoDocumentTreeItem';
+// tslint:disable:no-var-requires
+const EJSON = require("mongodb-extended-json");
 
 export class MongoCollectionTreeItem implements IAzureParentTreeItem {
 	public static contextValue: string = "MongoCollection";
@@ -93,22 +94,13 @@ export class MongoCollectionTreeItem implements IAzureParentTreeItem {
 	}
 
 	public async createChild(_node: IAzureNode, showCreatingNode: (label: string) => void): Promise<IAzureTreeItem> {
-		let docId: string | undefined = await vscode.window.showInputBox({
-			placeHolder: "Document ID",
-			prompt: "Enter a unique document ID or leave blank for a generated ID",
-			ignoreFocusOut: true
-		});
-
-		if (docId !== undefined) {
-			showCreatingNode(docId);
-			const result: InsertOneWriteOpResult = await this.collection.insertOne(docId === '' ? {} : { "id": docId });
-			const newDocument: IMongoDocument = await this.collection.findOne({ _id: result.insertedId });
-			return new MongoDocumentTreeItem(newDocument, this.collection);
-		}
-
-		throw new UserCancelledError();
+		showCreatingNode("");
+		const result: InsertOneWriteOpResult = await this.collection.insertOne({});
+		const newDocument: IMongoDocument = await this.collection.findOne({ _id: result.insertedId });
+		return new MongoDocumentTreeItem(newDocument, this.collection);
 	}
 
+	//tslint:disable:cyclomatic-complexity
 	executeCommand(name: string, args?: string[]): Thenable<string> {
 		try {
 			if (name === 'findOne') {
@@ -122,6 +114,9 @@ export class MongoCollectionTreeItem implements IAzureParentTreeItem {
 			}
 			else {
 				let argument;
+				if (args && args.length > 1) {
+					return undefined;
+				}
 				if (args) {
 					argument = args[0];
 				}
@@ -152,8 +147,8 @@ export class MongoCollectionTreeItem implements IAzureParentTreeItem {
 
 	public async deleteTreeItem(_node: IAzureNode): Promise<void> {
 		const message: string = `Are you sure you want to delete collection '${this.label}'?`;
-		const result = await vscode.window.showWarningMessage(message, DialogBoxResponses.Yes, DialogBoxResponses.Cancel);
-		if (result === DialogBoxResponses.Yes) {
+		const result = await vscode.window.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
+		if (result === DialogResponses.deleteResponse) {
 			await this.drop();
 		} else {
 			throw new UserCancelledError();
@@ -161,37 +156,48 @@ export class MongoCollectionTreeItem implements IAzureParentTreeItem {
 	}
 
 	private async drop(): Promise<string> {
-		await this.collection.drop();
-		return `Dropped collection '${this.collection.collectionName}'.`;
+		try {
+			await this.collection.drop();
+			return `Dropped collection '${this.collection.collectionName}'.`;
+		} catch (e) {
+			let error: { code?: number, name?: string } = e;
+			const NamespaceNotFoundCode = 26;
+			if (error.name === 'MongoError' && error.code === NamespaceNotFoundCode) {
+				return `Collection '${this.collection.collectionName}' could not be dropped because it does not exist.`;
+			} else {
+				throw error;
+			}
+		}
 	}
 
 	//tslint:disable:no-any
 	private async findOne(args?: any[]): Promise<string> {
-		if (args && args.length > 2) {
-			throw new Error("Too many arguments")
-		}
 		let result;
-		if (args.length === 1) {
+		if (!args || args.length === 0) {
+			result = await this.collection.findOne({});
+		} else if (args.length === 1) {
 			result = await this.collection.findOne(args[0]);
 		} else if (args.length === 2) {
 			result = await this.collection.findOne(args[0], { fields: args[1] });
 		} else {
-			result = await this.collection.findOne({});
+			return Promise.reject(new Error("Too many arguments passed to findOne."));
 		}
-		return this.stringify(result);
+		// findOne is the only command in this file whose output requires EJSON support.
+		// Hence that's the only function which uses EJSON.stringify rather than this.stringify.
+		return EJSON.stringify(result, null, '\t');
 	}
 
 	private insert(document: Object): Thenable<string> {
 		return this.collection.insert(document)
 			.then(({ insertedCount, insertedId, result }) => {
-				return this.stringify({ insertedCount, insertedId, result })
+				return this.stringify({ insertedCount, insertedId, result });
 			});
 	}
 
 	private insertOne(document: Object): Thenable<string> {
 		return this.collection.insertOne(document)
 			.then(({ insertedCount, insertedId, result }) => {
-				return this.stringify({ insertedCount, insertedId, result })
+				return this.stringify({ insertedCount, insertedId, result });
 			});
 	}
 
@@ -199,8 +205,12 @@ export class MongoCollectionTreeItem implements IAzureParentTreeItem {
 	private insertMany(args: any[]): Thenable<string> {
 		// documents = args[0], collectionWriteOptions from args[1]
 		let insertManyOptions: CollectionInsertManyOptions = {};
+		const docsLink: string = "Please see mongo shell documentation. https://docs.mongodb.com/manual/reference/method/db.collection.insertMany/#db.collection.insertMany.";
+		if (!args || args.length === 0) {
+			return Promise.reject(new Error("Too few arguments passed to insertMany. " + docsLink));
+		}
 		if (args.length > 2) {
-			throw new Error("Too many arguments. Please see mongo shell documentation. https://docs.mongodb.com/manual/reference/method/db.collection.insertMany/#db.collection.insertMany");
+			return Promise.reject(new Error("Too many arguments passed to insertMany. " + docsLink));
 		} else if (args.length === 2) {
 			if (args[1] && args[1].ordered) {
 				insertManyOptions["ordered"] = args[1].ordered;
@@ -212,28 +222,28 @@ export class MongoCollectionTreeItem implements IAzureParentTreeItem {
 
 		return this.collection.insertMany(args[0], insertManyOptions)
 			.then(({ insertedCount, insertedIds, result }) => {
-				return this.stringify({ insertedCount, insertedIds, result })
+				return this.stringify({ insertedCount, insertedIds, result });
 			});
 	}
 
 	private remove(args?: Object): Thenable<string> {
 		return this.collection.remove(args)
 			.then(({ ops, result }) => {
-				return this.stringify({ ops, result })
+				return this.stringify({ ops, result });
 			});
 	}
 
 	private deleteOne(args?: Object): Thenable<string> {
 		return this.collection.deleteOne(args)
 			.then(({ deletedCount, result }) => {
-				return this.stringify({ deletedCount, result })
+				return this.stringify({ deletedCount, result });
 			});
 	}
 
 	private deleteMany(args?: Object): Thenable<string> {
 		return this.collection.deleteMany(args)
 			.then(({ deletedCount, result }) => {
-				return this.stringify({ deletedCount, result })
+				return this.stringify({ deletedCount, result });
 			});
 	}
 
@@ -244,7 +254,7 @@ export class MongoCollectionTreeItem implements IAzureParentTreeItem {
 
 	// tslint:disable-next-line:no-any
 	private stringify(result: any): string {
-		return JSON.stringify(result, null, '\t')
+		return JSON.stringify(result, null, '\t');
 	}
 }
 
@@ -254,20 +264,15 @@ function reportProgress<T>(promise: Thenable<T>, title: string): Thenable<T> {
 			location: vscode.ProgressLocation.Window,
 			title
 		},
-		(progress) => {
+		(_progress) => {
 			return promise;
-		})
+		});
 }
 
 // tslint:disable-next-line:no-any
 function parseJSContent(content: string): any {
 	try {
-		const sandbox = {};
-		// tslint:disable-next-line:insecure-random
-		const key = 'parse' + Math.floor(Math.random() * 1000000);
-		sandbox[key] = {};
-		vm.runInNewContext(key + '=' + content, sandbox);
-		return sandbox[key];
+		return EJSON.parse(content);
 	} catch (error) {
 		throw error.message;
 	}

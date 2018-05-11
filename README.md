@@ -2,6 +2,14 @@
 # Cosmos DB Support for VS Code (Preview)
 [![Build Status](https://travis-ci.org/Microsoft/vscode-cosmosdb.svg?branch=master)](https://travis-ci.org/Microsoft/vscode-cosmosdb) [![Release Status](https://img.shields.io/github/tag/Microsoft/vscode-cosmosdb.svg?label=prerelease&colorB=0E7FC0)](https://github.com/Microsoft/vscode-cosmosdb/releases)
 
+Browse and query your MongoDB databases both locally and in the cloud using [_scrapbooks_](#mongo-scrapbooks) with rich Intellisense then connect to Azure to manage your Cosmos DB databases with support for MongoDB, Graph (Gremlin), and SQL (previously known as DocumentDB).
+
+![Cosmos DB Extension](resources/features.png)
+
+# We've Moved!
+
+You will now find us by clicking in the new Azure view container instead of the file explorer.
+
 # Prerequisites
 
 - Some less-common commands in the Mongo [scrapbook](#mongo-scrapbooks) and use of the Mongo shell require installing [Mongo DB and Mongo shell](https://docs.mongodb.com/manual/installation/).
@@ -12,29 +20,27 @@
 
 - Create a Cosmos DB account by clicking the `+` button in the title
 - View Azure Cosmos DB accounts and open directly in the portal
-- View/Create/Delete databases, collections, graphs, and documents
-- Click on a document to open in the editor
+- View/Create/Delete databases, collections, graphs, stored procedures, and documents
+- Click on a document or stored procedure to open in the editor
 - Click on a graph to visualize data
 - Query graph using [Gremlin](https://docs.microsoft.com/azure/cosmos-db/gremlin-support)
 - Edit a document and persist changes to the cloud
 - Attach a Mongo server by clicking the plug icon in the title
-
-*Support for Table accounts in CosmosDB is coming soon!
 
 ![Browse CosmosDB and MongoDB databases](resources/Browse.png)
 
 ## Mongo "Scrapbooks" (Run Mongo Commands with Rich Intellisense)
 
 - View your MongoDB database account by [signing in to Azure](#managing-azure-subscriptions) or attaching with a connection string
-- Optionally configure the user setting `mongo.shell.path` to your mongo shell executable path (many of the common commands have built-in support and do not require the Mongo shell to be installed - see [Prerequisites](#prerequisites))
-- Right-click on a database and select "Connect"
+- Optionally configure the setting `mongo.shell.path` if your mongo executable is not already on your system's PATH (many of the common commands have built-in support and do not require the Mongo shell to be installed - see [Prerequisites](#prerequisites))
 - Click on "New Mongo Scrapbook" in the tree title bar
+- Click on "Connect to a database" to indicate which database to run the commands against
 - Enter your commands and/or comments, eg: `db.<collectionName>.find()`
 - IntelliSense (auto-completions) will be provided
-- Place the cursor inside the command to execute and press `CMD+"` (Mac) or `CTRL+"` (Windows and Linux) to see the results
+- Click on "Execute" above a command to execute it, or press `CMD+"` (Mac) or `CTRL+"` (Windows and Linux) to execute the line with the cursor.
+- To run all commands, click on "Execute All", or press `CMD+:` or `Ctrl+:`
 - Save and re-use later
-
-![Mongo Intellisense](resources/intellisense.gif)
+![Mongo Scrapbook](resources/Scrapbook.gif)
 
 ## Use [Gremlin](https://docs.microsoft.com/azure/cosmos-db/gremlin-support) to query graphs
 
@@ -96,11 +102,13 @@ To select which subscriptions show up in the extension's explorer, click on the 
 
 - Azure no longer supports gremlin queries on pre-GA graph accounts. If you see the error "Could not find a valid gremlin endpoint for *graph*", then choose "Open Portal" on the graph node and check the "Gremlin Endpoint" in the Overview tab. If it does not take the form of '...[graph-name].***gremlin***.cosmosdb.azure.com...', then you will need to create a new graph account using the Azure portal or the current version of the extension.
 - Graphs are not currently supported with the emulator
+- Viewing/editing tables is not currently supported
 
 # Contributing
-There are a couple of ways you can contribute to this repo:
+There are several ways you can contribute to our [repo](https://github.com/Microsoft/vscode-cosmosdb):
 
-- **Ideas, feature requests and bugs**: We are open to all ideas and we want to get rid of bugs! Use the Issues section to either report a new issue, provide your ideas or contribute to existing threads.
+- **Ideas, feature requests and bugs**: We are open to all ideas and we want to get rid of bugs! Use the [Issues](https://github.com/Microsoft/vscode-cosmosdb/issues) section to report a new issue, provide your ideas or contribute to existing threads.
+
 - **Documentation**: Found a typo or strangely worded sentences? Submit a PR!
 - **Code**: Contribute bug fixes, features or design changes:
   - Clone the repository locally and open in VS Code.

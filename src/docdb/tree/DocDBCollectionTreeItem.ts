@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CollectionMeta, DocumentClient, CollectionPartitionKey } from 'documentdb';
-import { IAzureNode, IAzureTreeItem, IAzureParentTreeItem, UserCancelledError } from 'vscode-azureextensionui';
+import { IAzureNode, IAzureTreeItem, UserCancelledError, IAzureParentTreeItem, DialogResponses } from 'vscode-azureextensionui';
 import * as vscode from 'vscode';
-import { DocDBStoredProceduresTreeItem } from './DocDBStoredProceduresTreeItem';
 import { getDocumentClient } from "../getDocumentClient";
-import { DocDBDocumentsTreeItem } from './DocDBDocumentsTreeItem';
 import * as path from "path";
-import { DialogBoxResponses } from '../../constants';
+import { DocDBStoredProceduresTreeItem } from './DocDBStoredProceduresTreeItem';
+import { DocDBStoredProcedureTreeItem } from './DocDBStoredProcedureTreeItem';
+import { DocDBDocumentsTreeItem } from './DocDBDocumentsTreeItem';
+import { DocDBDocumentTreeItem } from './DocDBDocumentTreeItem';
 
 /**
  * Represents a DocumentDB collection
@@ -19,18 +20,16 @@ export class DocDBCollectionTreeItem implements IAzureParentTreeItem {
     public static contextValue: string = "cosmosDBDocumentCollection";
     public readonly contextValue: string = DocDBCollectionTreeItem.contextValue;
 
-    private readonly _children: IAzureTreeItem[];
+    private readonly _documentsTreeItem: DocDBDocumentsTreeItem;
+    private readonly _storedProceduresTreeItem: DocDBStoredProceduresTreeItem;
 
     constructor(
         private _documentEndpoint: string,
         private _masterKey: string,
         private _collection: CollectionMeta,
         private _isEmulator: boolean) {
-
-        this._children = [
-            new DocDBDocumentsTreeItem(this._documentEndpoint, this._masterKey, this, this._isEmulator),
-            new DocDBStoredProceduresTreeItem(this._documentEndpoint, this._masterKey, this._collection, this._isEmulator)
-        ];
+        this._documentsTreeItem = new DocDBDocumentsTreeItem(this._documentEndpoint, this._masterKey, this, this._isEmulator);
+        this._storedProceduresTreeItem = new DocDBStoredProceduresTreeItem(this._documentEndpoint, this._masterKey, this, this._isEmulator);
     }
 
     public get id(): string {
@@ -48,14 +47,6 @@ export class DocDBCollectionTreeItem implements IAzureParentTreeItem {
         };
     }
 
-    public async loadMoreChildren(node: IAzureNode<IAzureTreeItem>, clearCache: boolean): Promise<IAzureTreeItem[]> {
-        return this._children;
-    }
-
-    public hasMoreChildren(): boolean {
-        return false;
-    }
-
     public get link(): string {
         return this._collection._self;
     }
@@ -70,8 +61,8 @@ export class DocDBCollectionTreeItem implements IAzureParentTreeItem {
 
     public async deleteTreeItem(_node: IAzureNode): Promise<void> {
         const message: string = `Are you sure you want to delete collection '${this.label}' and its contents?`;
-        const result = await vscode.window.showWarningMessage(message, DialogBoxResponses.Yes, DialogBoxResponses.Cancel);
-        if (result === DialogBoxResponses.Yes) {
+        const result = await vscode.window.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
+        if (result === DialogResponses.deleteResponse) {
             const client = this.getDocumentClient();
             await new Promise((resolve, reject) => {
                 client.deleteCollection(this.link, function (err) {
@@ -83,7 +74,26 @@ export class DocDBCollectionTreeItem implements IAzureParentTreeItem {
         }
     }
 
+    public async loadMoreChildren(_node: IAzureNode<IAzureTreeItem>, _clearCache: boolean): Promise<IAzureTreeItem[]> {
+        return [this._documentsTreeItem, this._storedProceduresTreeItem];
+    }
+
+    public hasMoreChildren(): boolean {
+        return false;
+    }
+
     public pickTreeItem?(expectedContextValue: string): IAzureTreeItem | undefined {
-        return this._children.find(node => node.contextValue === expectedContextValue);
+        switch (expectedContextValue) {
+            case DocDBDocumentsTreeItem.contextValue:
+            case DocDBDocumentTreeItem.contextValue:
+                return this._documentsTreeItem;
+
+            case DocDBStoredProceduresTreeItem.contextValue:
+            case DocDBStoredProcedureTreeItem.contextValue:
+                return this._storedProceduresTreeItem;
+
+            default:
+                return undefined;
+        }
     }
 }

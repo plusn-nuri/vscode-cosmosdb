@@ -25,7 +25,7 @@ export class LanguageService {
 		this.textDocuments.listen(connection);
 		// After the server has started the client sends an initilize request. The server receives
 		// in the passed params the rootPath of the workspace plus the client capabilities.
-		connection.onInitialize((params: InitializeParams): InitializeResult => {
+		connection.onInitialize((_params: InitializeParams): InitializeResult => {
 			return {
 				capabilities: {
 					textDocumentSync: this.textDocuments.syncKind, // Tell the client that the server works in FULL text document sync mode
@@ -45,7 +45,7 @@ export class LanguageService {
 					this.schemaService.registerSchemas(this.db)
 						.then(schemas => {
 							this.configureSchemas(schemas);
-						})
+						});
 				});
 		});
 
@@ -77,6 +77,6 @@ export class LanguageService {
 	configureSchemas(schemas: SchemaConfiguration[]): void {
 		this.jsonLanguageService.configure({
 			schemas
-		})
+		});
 	}
 }

@@ -5,8 +5,29 @@
 
 // The module 'assert' provides assertion methods from node
 import * as assert from 'assert';
-import { MongoCommands } from '../src/mongo/commands';
 import { Position } from 'vscode';
+import { getCommandFromText } from '../src/mongo/MongoScrapbook';
+
+function testParseExpectError(text: string, expected: { collection: string, name: string, args: object[] }) {
+    let caughtError = false;
+    try {
+        testParse(text, expected);
+    } catch (error) {
+        caughtError = true;
+    }
+
+    assert.equal(caughtError, true, "Parse should have thrown an exception but didn't");
+}
+
+function testParse(text: string, expected: { collection: string, name: string, args: object[] }) {
+    let command = getCommandFromText(text, new Position(0, 0));
+
+    assert.equal(command.collection, expected.collection, "Parsed collection name is not correct");
+    assert.equal(command.name, expected.name, "Parsed command name is not correct");
+
+    let actualArgs = (command.arguments || []).map(arg => JSON.parse(arg));
+    assert.deepEqual(actualArgs, expected.args, "Parsed arguments are not correct");
+}
 
 function testParseExpectError(text: string, expected: { collection: string, name: string, args: object[] }) {
     let caughtError = false;
@@ -32,13 +53,13 @@ function testParse(text: string, expected: { collection: string, name: string, a
 suite("scrapbook parsing Tests", () => {
     test("find", () => {
         let text = "db.find()";
-        let command = MongoCommands.getCommand(text, new Position(0, 0));
+        let command = getCommandFromText(text, new Position(0, 0));
         assert.equal(command.text, text);
     });
 
     test("find with semicolon", () => {
         let text = "db.find();";
-        let command = MongoCommands.getCommand(text, new Position(0, 0));
+        let command = getCommandFromText(text, new Position(0, 0));
         assert.equal(command.text, text);
     });
 
@@ -46,7 +67,7 @@ suite("scrapbook parsing Tests", () => {
         let line1 = "db.find()";
         let line2 = "db.insertOne({'a': 'b'})";
         let text = `${line1}\n${line2}`;
-        let command = MongoCommands.getCommand(text, new Position(0, 0));
+        let command = getCommandFromText(text, new Position(0, 0));
         assert.equal(command.text, line1);
     });
 
@@ -54,7 +75,7 @@ suite("scrapbook parsing Tests", () => {
         let line1 = "db.find()";
         let line2 = "db.insertOne({'a':'b'})";
         let text = `${line1}\n${line2}`;
-        let command = MongoCommands.getCommand(text, new Position(2, 0));
+        let command = getCommandFromText(text, new Position(2, 0));
         assert.equal(command.text, line2);
     });
 
@@ -62,7 +83,7 @@ suite("scrapbook parsing Tests", () => {
         let line1 = "db.find();";
         let line2 = "db.insertOne({'a':'b'})";
         let text = `${line1}\n${line2}`;
-        let command = MongoCommands.getCommand(text, new Position(2, 0));
+        let command = getCommandFromText(text, new Position(2, 0));
         assert.equal(command.text, line2);
     });
 
@@ -70,7 +91,7 @@ suite("scrapbook parsing Tests", () => {
         let line1 = "db.find()";
         let line2 = "db.insertOne({'a': 'b'})";
         let text = `${line1}\r\n${line2}`;
-        let command = MongoCommands.getCommand(text, new Position(0, 0));
+        let command = getCommandFromText(text, new Position(0, 0));
         assert.equal(command.text, line1);
     });
 
@@ -78,7 +99,7 @@ suite("scrapbook parsing Tests", () => {
         let line1 = "db.find()";
         let line2 = "db.insertOne({'a':'b'})";
         let text = `${line1}\r\n${line2}`;
-        let command = MongoCommands.getCommand(text, new Position(2, 0));
+        let command = getCommandFromText(text, new Position(2, 0));
         assert.equal(command.text, line2);
     });
 
@@ -86,7 +107,7 @@ suite("scrapbook parsing Tests", () => {
         let line1 = "db.find()";
         let line2 = "db.insertOne({'a':'b'})";
         let text = `\r\n\r\n\r\n\r\n\r\n\r\n${line1}\r\n\r\n\r\n\r\n\r\n\r\n${line2}\r\n\r\n\r\n\r\n\r\n\r\n`;
-        let command = MongoCommands.getCommand(text, new Position(5, 0));
+        let command = getCommandFromText(text, new Position(5, 0));
         assert.equal(command.text, line2);
     });
 
@@ -94,7 +115,7 @@ suite("scrapbook parsing Tests", () => {
         let line1 = "db.find()";
         let line2 = "db.insertOne({'a': 'b'})";
         let text = `${line1}\r\n\r\n\r\n${line2}`;
-        let command = MongoCommands.getCommand(text, new Position(2, 0));
+        let command = getCommandFromText(text, new Position(2, 0));
         assert.equal(command.text, line1);
     });
 
@@ -196,22 +217,60 @@ suite("scrapbook parsing Tests", () => {
         let arg0 = `{"Age": 31}`;
         let arg1 = `{"Name": true}`;
         let text = `db.find(${arg0}\r\n,\r\n\r\n${arg1})`;
-        let command = MongoCommands.getCommand(text, new Position(0, 0));
-        assert.deepEqual(JSON.parse(command.arguments[0]), JSON.parse(arg0));
-        assert.deepEqual(JSON.parse(command.arguments[1]), JSON.parse(arg1));
+        let command = getCommandFromText(text, new Position(0, 0));
+        assert.deepEqual(JSON.parse(command.arguments![0]), JSON.parse(arg0));
+        assert.deepEqual(JSON.parse(command.arguments![1]), JSON.parse(arg1));
     });
     test("test function call with nested parameters - documents in an array", () => {
         let arg0 = `[{"name": "a"}, {"name": "b"}, {"name": "c"}]`;
         let arg1 = `{"ordered": true}`;
         let text = `db.test1.insertMany(${arg0},\r\n\r\n\r\n${arg1})`;
-        let command = MongoCommands.getCommand(text, new Position(0, 0));
-        assert.deepEqual(JSON.parse(command.arguments[0]), JSON.parse(arg0));
-        assert.deepEqual(JSON.parse(command.arguments[1]), JSON.parse(arg1));
+        let command = getCommandFromText(text, new Position(0, 0));
+        assert.deepEqual(JSON.parse(command.arguments![0]), JSON.parse(arg0));
+        assert.deepEqual(JSON.parse(command.arguments![1]), JSON.parse(arg1));
     });
     test("test function call that has a nested parameter", () => {
         let arg0 = `{"name": {"First" : "a", "Last":"b"} }`;
         let text = `db.test1.insertMany(${arg0})`;
-        let command = MongoCommands.getCommand(text, new Position(0, 0));
-        assert.deepEqual(JSON.parse(command.arguments[0]), JSON.parse(arg0));
+        let command = getCommandFromText(text, new Position(0, 0));
+        assert.deepEqual(JSON.parse(command.arguments![0]), JSON.parse(arg0));
+    });
+    test("test function call with erroneous syntax: missing comma", () => {
+        let arg0 = `{"name": {"First" : "a", "Last":"b"} }`;
+        let arg1 = `{"ordered": true}`;
+        let text = `db.test1.insertMany(${arg0}   ${arg1})`;
+        let command = getCommandFromText(text, new Position(0, 0));
+        const err = command.errors[0];
+        assert.deepEqual(err.text, "{");
+        assert.deepEqual(err.position.line, 0);
+        assert.deepEqual(err.position.character, 61);
+    });
+    test("test function call with erroneous syntax: missing comma, parameters separated with newline", () => {
+        let arg0 = `{"name": {"First" : "a", "Last":"b"} }`;
+        let arg1 = `{"ordered": \ntrue}`;
+        let text = `db.test1.insertMany(${arg0} \n  ${arg1})`;
+        let command = getCommandFromText(text, new Position(0, 0));
+        const err = command.errors[0];
+        assert.deepEqual(err.text, "{");
+        assert.deepEqual(err.position.line, 1);
+        assert.deepEqual(err.position.character, 2);
+    });
+    test("test function call with erroneous syntax: missing double quote", () => {
+        let arg0 = `{name": {"First" : "a", "Last":"b"} }`;
+        let text = `db.test1.insertMany(${arg0})`;
+        let command = getCommandFromText(text, new Position(0, 0));
+        const err = command.errors[0];
+        assert.deepEqual(err.text, "name");
+        assert.deepEqual(err.position.line, 0);
+        assert.deepEqual(err.position.character, 21);
+    });
+    test("test function call with erroneous syntax: missing opening brace", () => {
+        let arg0 = `"name": {"First" : "a", "Last":"b"} }`;
+        let text = `db.test1.insertMany(${arg0})`;
+        let command = getCommandFromText(text, new Position(0, 0));
+        const err = command.errors[0];
+        assert.deepEqual(err.text, ":");
+        assert.deepEqual(err.position.line, 0);
+        assert.deepEqual(err.position.character, 26);
     });
 });

@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import * as cpUtils from '../../utils/cp';
 import * as path from 'path';
 import { MongoClient, Db, Collection } from 'mongodb';
 import { Shell } from '../shell';
-import { IAzureParentTreeItem, IAzureTreeItem, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
-import { DialogBoxResponses } from '../../constants';
+import { IAzureParentTreeItem, IAzureTreeItem, IAzureNode, UserCancelledError, IActionContext, DialogResponses } from 'vscode-azureextensionui';
 import { MongoCollectionTreeItem } from './MongoCollectionTreeItem';
 import { MongoCommand } from '../MongoCommand';
+import { ext } from '../../extensionVariables';
 
 export class MongoDatabaseTreeItem implements IAzureParentTreeItem {
 	public static contextValue: string = "mongoDb";
@@ -19,18 +20,20 @@ export class MongoDatabaseTreeItem implements IAzureParentTreeItem {
 	public readonly connectionString: string;
 	public readonly databaseName: string;
 
-	public isConnected: boolean = false;
+	private _parentId: string;
 
-	constructor(databaseName: string, connectionString: string) {
+	constructor(databaseName: string, connectionString: string, parentId: string) {
 		this.databaseName = databaseName;
 		this.connectionString = connectionString;
+		this._parentId = parentId;
 	}
 
 	public get label(): string {
-		if (this.isConnected) {
-			return this.databaseName + " (Connected)";
-		}
 		return this.databaseName;
+	}
+
+	public get description(): string {
+		return ext.connectedMongoDB && ext.connectedMongoDB.id === `${this._parentId}/${this.id}` ? 'Connected' : '';
 	}
 
 	public get id(): string {
@@ -72,8 +75,8 @@ export class MongoDatabaseTreeItem implements IAzureParentTreeItem {
 
 	public async deleteTreeItem(_node: IAzureNode): Promise<void> {
 		const message: string = `Are you sure you want to delete database '${this.label}'?`;
-		const result = await vscode.window.showWarningMessage(message, DialogBoxResponses.Yes, DialogBoxResponses.Cancel);
-		if (result === DialogBoxResponses.Yes) {
+		const result = await vscode.window.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
+		if (result === DialogResponses.deleteResponse) {
 			const db = await this.getDb();
 			await db.dropDatabase();
 		} else {
@@ -86,7 +89,7 @@ export class MongoDatabaseTreeItem implements IAzureParentTreeItem {
 		return accountConnection.db(this.databaseName);
 	}
 
-	executeCommand(command: MongoCommand): Thenable<string> {
+	executeCommand(command: MongoCommand, context: IActionContext): Thenable<string> {
 		if (command.collection) {
 			return this.getDb()
 				.then(db => {
@@ -97,14 +100,14 @@ export class MongoDatabaseTreeItem implements IAzureParentTreeItem {
 							return result;
 						}
 					}
-					return reportProgress(this.executeCommandInShell(command), 'Executing command');
+					return reportProgress(this.executeCommandInShell(command, context), 'Executing command');
 				});
 		}
 
 		if (command.name === 'createCollection') {
 			return reportProgress(this.createCollection(stripQuotes(command.arguments.join(','))).then(() => JSON.stringify({ 'Created': 'Ok' })), 'Creating collection');
 		} else {
-			return reportProgress(this.executeCommandInShell(command), 'Executing command');
+			return reportProgress(this.executeCommandInShell(command, context), 'Executing command');
 		}
 	}
 
@@ -118,21 +121,34 @@ export class MongoDatabaseTreeItem implements IAzureParentTreeItem {
 		return new MongoCollectionTreeItem(newCollection);
 	}
 
-	executeCommandInShell(command: MongoCommand): Thenable<string> {
+	executeCommandInShell(command: MongoCommand, context: IActionContext): Thenable<string> {
+		context.properties["executeInShell"] = "true";
 		return this.getShell().then(shell => shell.exec(command.text));
 	}
 
-	private getShell(): Promise<Shell> {
-		const shellPath = <string>vscode.workspace.getConfiguration().get('mongo.shell.path')
+	private async getShell(): Promise<Shell> {
+		const settingKey: string = ext.settingsKeys.mongoShellPath;
+		let shellPath: string | undefined = vscode.workspace.getConfiguration().get(settingKey);
 		if (!shellPath) {
-			return <Promise<null>>vscode.window.showInputBox({
-				placeHolder: "Configure the path to the mongo shell executable",
-				ignoreFocusOut: true
-			}).then(value => vscode.workspace.getConfiguration().update('mongo.shell.path', value, true)
-				.then(() => this.createShell(value)));
-		} else {
-			return this.createShell(shellPath);
+			if (await cpUtils.commandSucceeds('mongo', '--version')) {
+				// If the user already has mongo in their system path, just use that
+				shellPath = 'mongo';
+			} else {
+				// If all else fails, prompt the user for the mongo path
+				shellPath = await vscode.window.showInputBox({
+					placeHolder: "Configure the path to the mongo shell executable",
+					ignoreFocusOut: true
+				});
+
+				if (shellPath) {
+					await vscode.workspace.getConfiguration().update(settingKey, shellPath, vscode.ConfigurationTarget.Global);
+				} else {
+					throw new UserCancelledError();
+				}
+			}
 		}
+
+		return await this.createShell(shellPath);
 	}
 
 	private async createShell(shellPath: string): Promise<Shell> {
@@ -150,7 +166,7 @@ export function validateMongoCollectionName(collectionName: string): string | un
 	if (!collectionName) {
 		return "Collection name cannot be empty";
 	}
-	const systemPrefix = "system."
+	const systemPrefix = "system.";
 	if (collectionName.startsWith(systemPrefix)) {
 		return `"${systemPrefix}" prefix is reserved for internal use`;
 	}
@@ -166,9 +182,9 @@ function reportProgress<T>(promise: Thenable<T>, title: string): Thenable<T> {
 			location: vscode.ProgressLocation.Window,
 			title
 		},
-		(progress) => {
+		(_progress) => {
 			return promise;
-		})
+		});
 }
 
 function stripQuotes(term: string): string {

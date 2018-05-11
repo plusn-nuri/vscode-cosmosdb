@@ -92,8 +92,8 @@ export class GraphViewServer extends EventEmitter {
     }
 
     // how know resolve/reject?
-    return new Promise((resolve, reject) => {
-      this._httpServer = http.createServer()
+    return new Promise((resolve, _reject) => {
+      this._httpServer = http.createServer();
       this._httpServer.listen(
         0, // dynamnically pick an unused port
         () => {
@@ -109,7 +109,7 @@ export class GraphViewServer extends EventEmitter {
         this.setUpSocket();
       });
 
-      this._server.on('error', socket => {
+      this._server.on('error', _socket => {
         console.error("Error from server");
       });
     });
@@ -124,12 +124,12 @@ export class GraphViewServer extends EventEmitter {
   }
 
   private getViewSettings(): GraphViewSettings {
-    var viewSettings: GraphViewSettings = vscode.workspace.getConfiguration().get<GraphViewSettings>('cosmosDB.graph.viewSettings') || <GraphViewSettings>{};
+    let viewSettings: GraphViewSettings = vscode.workspace.getConfiguration().get<GraphViewSettings>('cosmosDB.graph.viewSettings') || <GraphViewSettings>{};
     return viewSettings;
   }
 
   private async queryAndShowResults(queryId: number, gremlinQuery: string): Promise<void> {
-    var results: GraphResults | undefined;
+    let results: GraphResults | undefined;
     const start = Date.now();
 
     try {
@@ -154,7 +154,7 @@ export class GraphViewServer extends EventEmitter {
         actionContext.properties.isDefaultQuery = gremlinQuery === "g.V()" ? "true" : "false";
 
         // Full query results - may contain vertices and/or edges and/or other things
-        var fullResults = await thisServer.executeQuery(queryId, gremlinQuery);
+        let fullResults = await thisServer.executeQuery(queryId, gremlinQuery);
         actionContext.measurements.mainQueryDuration = (Date.now() - start) / 1000;
         const edgesStart = Date.now();
 
@@ -174,7 +174,7 @@ export class GraphViewServer extends EventEmitter {
         if (results.limitedVertices.length) {
           try {
             // If it returned any vertices, we need to also query for edges
-            var edges = await thisServer.queryEdges(queryId, results.limitedVertices);
+            let edges = await thisServer.queryEdges(queryId, results.limitedVertices);
             let { countUniqueEdges, limitedEdges } = thisServer.limitEdges(limitedVertices, edges);
 
             results.countUniqueEdges = countUniqueEdges;
@@ -189,7 +189,7 @@ export class GraphViewServer extends EventEmitter {
       });
     } catch (error) {
       // If there's an error, send it to the client to display
-      var message = this.removeErrorCallStack(error.message || error.toString());
+      let message = this.removeErrorCallStack(error.message || error.toString());
       this._pageState.errorMessage = message;
       this._socket.emitToClient("showQueryError", queryId, message);
       return;
@@ -229,7 +229,7 @@ export class GraphViewServer extends EventEmitter {
 
     // Enforce max limit on edges
     let limitedEdges = edges.slice(0, this.maxEdges);
-    return { limitedEdges, countUniqueEdges }
+    return { limitedEdges, countUniqueEdges };
   }
 
   private async queryEdges(queryId: number, vertices: { id: string }[]): Promise<GraphEdge[]> {
@@ -241,8 +241,8 @@ export class GraphViewServer extends EventEmitter {
     let idLists: string[] = [];
     let currentIdList = "";
 
-    for (let i = 0; i < vertices.length; ++i) {
-      let vertexId = `"${vertices[i].id}"`;
+    for (let vertex of vertices) {
+      let vertexId = `"${vertex.id}"`;
       if (currentIdList.length && currentIdList.length + vertexId.length > maxIdListLength) {
         // Start a new id list
         idLists.push(currentIdList);
@@ -257,14 +257,13 @@ export class GraphViewServer extends EventEmitter {
     // Build queries from each list of IDs
     // tslint:disable-next-line:no-any
     let promises: Promise<any[]>[] = [];
-    for (let i = 0; i < idLists.length; ++i) {
-      let idList = idLists[i];
+    for (let idList of idLists) {
       let query = `g.V(${idList}).outE().dedup()`;
-      var promise = this.executeQuery(queryId, query);
+      let promise = this.executeQuery(queryId, query);
       promises.push(promise);
     }
 
-    var results = await Promise.all(promises);
+    let results = await Promise.all(promises);
     return Array.prototype.concat(...results);
   }
 
@@ -272,7 +271,7 @@ export class GraphViewServer extends EventEmitter {
     // Remove everything after the lines start looking like this:
     //      at Microsoft.Azure.Graphs.GremlinGroovy.GremlinGroovyTraversalScript.TranslateGroovyToCsharpInner()
     try {
-      var match = message.match(/^\r?\n?\s*at \S+\(\)\s*$/m);
+      let match = message.match(/^\r?\n?\s*at \S+\(\)\s*$/m);
       if (match) {
         return message.slice(0, match.index);
       }
@@ -339,7 +338,7 @@ export class GraphViewServer extends EventEmitter {
       if (firstValidError) {
         throw firstValidError;
       } else {
-        throw new Error(`Could not find a valid gremlin endpoint for ${this.configuration.graphName}.\r\n\r\nTried ${this.configuration.possibleGremlinEndpoints.map(e => e.host).join(", ")}`)
+        throw new Error(`Could not find a valid gremlin endpoint for ${this.configuration.graphName}.\r\n\r\nTried ${this.configuration.possibleGremlinEndpoints.map(e => e.host).join(", ")}`);
       }
     }
   }
@@ -359,7 +358,7 @@ export class GraphViewServer extends EventEmitter {
       });
 
     // Patch up handleProtocolMessage as a temporary work-around for https://github.com/jbmusso/gremlin-javascript/issues/93
-    var originalHandleProtocolMessage = client.handleProtocolMessage;
+    let originalHandleProtocolMessage = client.handleProtocolMessage;
     client.handleProtocolMessage = function handleProtocolMessage(message) {
       if (!message.binary) {
         // originalHandleProtocolMessage isn't handling non-binary messages, so convert this one back to binary
@@ -468,7 +467,7 @@ export class GraphViewServer extends EventEmitter {
   }
 
   // tslint:disable-next-line:no-any
-  private log(message, ...args: any[]) {
+  private log(_message, ..._args: any[]) {
     // console.log(message, ...args);
   }
 }
