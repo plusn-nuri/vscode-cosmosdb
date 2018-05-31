@@ -12,7 +12,7 @@ import { MongoVisitor } from './grammar/visitors';
 import { mongoLexer } from './grammar/mongoLexer';
 import * as vscodeUtil from './../utils/vscodeUtils';
 import { CosmosEditorManager } from '../CosmosEditorManager';
-import { IAzureParentNode, AzureTreeDataProvider, IActionContext } from 'vscode-azureextensionui';
+import { IAzureParentNode, AzureTreeDataProvider, IActionContext, parseError } from 'vscode-azureextensionui';
 import { MongoFindResultEditor } from './editors/MongoFindResultEditor';
 import { MongoFindOneResultEditor } from './editors/MongoFindOneResultEditor';
 import { MongoCommand } from './MongoCommand';
@@ -59,7 +59,12 @@ export function getAllCommandsFromTextDocument(document: vscode.TextDocument): M
 
 async function executeCommands(activeEditor: vscode.TextEditor, database: IAzureParentNode<MongoDatabaseTreeItem>, extensionPath, editorManager: CosmosEditorManager, tree: AzureTreeDataProvider, context: IActionContext, commands: MongoCommand[]): Promise<void> {
 	for (let command of commands) {
-		await executeCommand(activeEditor, database, extensionPath, editorManager, tree, context, command);
+		try {
+			await executeCommand(activeEditor, database, extensionPath, editorManager, tree, context, command);
+		} catch (err) {
+			vscode.window.showErrorMessage(`Error in command ${command.name} at ${command.range.start.line}, ${command.range.start.character}. Please check syntax. Stopping execution of following commands.`);
+			throw parseError(err);
+		}
 	}
 }
 
