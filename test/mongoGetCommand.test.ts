@@ -181,6 +181,21 @@ suite("scrapbook parsing Tests", () => {
         );
     });
 
+    test("expect error: missing function name", () => {
+        // From https://github.com/Microsoft/vscode-cosmosdb/issues/659
+        testParse(
+            `db.c1.`,
+            {
+                collection: "c1",
+                name: "",
+                args: []
+            },
+            {
+                // There should be errors, but that's covered by https://github.com/Microsoft/vscode-cosmosdb/issues/653
+            }
+        );
+    });
+
     // https://github.com/Microsoft/vscode-cosmosdb/issues/467
     // test("single quoted property names", () => {
     //     testParse(

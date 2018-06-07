@@ -26,7 +26,7 @@ export class MongoCodeLensProvider implements vscode.CodeLensProvider {
 	}
 
 	public provideCodeLenses(document: vscode.TextDocument, _token: vscode.CancellationToken): vscode.ProviderResult<vscode.CodeLens[]> {
-		var me = this;
+		const me = this;
 
 		return callWithTelemetryAndErrorHandling("mongo.provideCodeLenses", this._reporter, this._output, function (this: IActionContext) {
 			// Suppress except for errors - this can fire on every keystroke
