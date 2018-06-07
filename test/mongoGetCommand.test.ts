@@ -221,6 +221,11 @@ suite("scrapbook parsing Tests", () => {
                 firstErrorText: "<missing STRING_LITERAL>"
             }
         );
+
+        // Just make sure doesn't throw
+        getCommandFromText(`db..(1, "a");`);
+        getCommandFromText(`..(1, "a");`);
+        getCommandFromText(`..c1(1, "a");`);
     });
 
     // https://github.com/Microsoft/vscode-cosmosdb/issues/467
